@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:pertemuan10_2306046/models/product_model.dart';
 import 'package:pertemuan10_2306046/pages/login_page.dart';
+import 'package:pertemuan10_2306046/pages/product_detail_page.dart';
+import 'package:pertemuan10_2306046/pages/product_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class HomePage extends StatefulWidget {
@@ -15,6 +17,8 @@ class _HomePageState extends State<HomePage> {
 
   // var utama untuk data
   List<ProductModel> products = [];
+  // var utk total data
+  int totalProduct = 0;
 
   @override
   void initState() {
@@ -25,148 +29,22 @@ class _HomePageState extends State<HomePage> {
 
   // membuat method loadproducts untuk menampilkan daftar product
   Future<void> loadProducts() async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String> productList = prefs.getStringList('products') ?? [];
+    final res = await SharedPreferences.getInstance();
+    List<String> productList = res.getStringList('products') ?? [];
+    totalProduct = productList.length;
     setState(() {
-      products = productList
-          .map((item) => ProductModel.fromJson(item)) 
+      products = productList.reversed
+          .take(3)
+          .map((item) => ProductModel.fromJson(item))
           .toList();
     });
-  }
-
-  // methode saveprododuct untuk menyimpan product
-  Future<void> saveProduct() async {
-    final prefs = await SharedPreferences.getInstance();
-    List<String> productList = products.map((item) => item.toJson()).toList();
-    await prefs.setStringList('products', productList);
-  }
-
-  // method addproduct untuk menambah product
-  Future<void> addProduct(ProductModel product) async {
-    setState(() {
-      products.add(product);
-    });
-    await saveProduct();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Produk berhasil ditambahkan")),
-      );
-  }
-
-  // method update
-  Future<void> updateProduct(int index, ProductModel product) async {
-    setState(() {
-      products[index] = product;
-    });
-    await saveProduct();
-  }
-
-  // methode delete product
-  Future<void> deleteProduct(int index) async {
-    setState(() {
-      products.removeAt(index);
-    });
-    await saveProduct();
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text("Produk berhasil dihapus"),));
-  }
-
-  final formKey = GlobalKey<FormState>();
-
-  // showform
-  void showform({ProductModel? product, int? index}) {
-    TextEditingController nameController = TextEditingController(
-      text: product?.name ?? "",
-    );
-    TextEditingController descriptionController = TextEditingController(
-      text: product?.description ?? "",
-    );
-    TextEditingController priceController = TextEditingController(
-      text: product?.price.toString() ?? "",
-    );
-
-    showDialog(
-      context: context, 
-      builder: (_) => AlertDialog(
-        title: Text(product == null ? "Tambah Produk" : "Edit Produk"),
-        content: Form(
-          key: formKey,
-          child: Column(
-            mainAxisSize: .min,
-            children: [
-              TextFormField(
-                controller: nameController,
-                decoration: InputDecoration(labelText: "Nama"),
-                validator: (value){
-                  if (value == null || value.trim().isEmpty){
-                    return "Nama produk wajib diisi";
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: descriptionController,
-                decoration: InputDecoration(labelText: "Deskripsi"),
-                validator: (value){
-                  if (value == null || value.trim().isEmpty){
-                    return "Deskripsi wajib diisi";
-                  }
-                  return null;
-                },
-              ),
-              TextFormField(
-                controller: priceController,
-                decoration: InputDecoration(labelText: "Harga"),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty){
-                    return "Harga wajib diisi";
-                  }
-                  if (int.tryParse(value) == null){
-                    return "Harga harus berupa angka";
-                  }
-                  if (int.parse(value) <= 0) {
-                    return "Harga harus lebih dari 0";
-                  }
-                  return null;
-                }
-              ),
-            ],
-          ),
-        ),
-      actions: [
-        ElevatedButton(
-          onPressed: () {
-            if (!formKey.currentState!.validate()) {
-              return;
-            }
-            final newProduct = ProductModel(
-            name: nameController.text, 
-            description: descriptionController.text, 
-            price: int.parse(priceController.text)
-            );
-
-            if (product == null) {
-              addProduct(newProduct);
-            } else {
-              updateProduct(index!, newProduct);
-            }
-            Navigator.pop(context);
-          }, 
-          child: Text(
-            product == null ? "Simpan" : "Update",
-          )
-        )
-      ],
-      ),
-    );
   }
 
   Future<void> getUser() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       username = prefs.getString('username') ?? '';
-    }); 
+    });
   }
 
   Future<void> logout() async {
@@ -192,7 +70,7 @@ class _HomePageState extends State<HomePage> {
                 height: 150,
                 padding: const .symmetric(horizontal: 15, vertical: 12),
                 decoration: BoxDecoration(
-                  color:  Colors.white,
+                  color: Colors.white,
                   borderRadius: .circular(20),
                   boxShadow: [
                     BoxShadow(
@@ -207,7 +85,7 @@ class _HomePageState extends State<HomePage> {
                     CircleAvatar(
                       radius: 28,
                       backgroundImage: NetworkImage(
-                        "https://picsum.photos/id/14/200/300"
+                        "https://picsum.photos/id/14/200/300",
                       ),
                     ),
                     const SizedBox(width: 15),
@@ -217,7 +95,10 @@ class _HomePageState extends State<HomePage> {
                         children: [
                           Text(
                             "Hai, Selamat Datang!",
-                            style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
                           ),
                           const SizedBox(height: 5),
                           Row(
@@ -234,20 +115,24 @@ class _HomePageState extends State<HomePage> {
                                 Icons.verified,
                                 color: Colors.green,
                                 size: 20,
-                              )
+                              ),
                             ],
                           ),
                           const SizedBox(height: 10),
-                          GestureDetector(
-                            onTap: logout,
-                            child: Container(
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: GestureDetector(
+                              onTap: logout,
+                              child: Container(
                                 padding: const .all(10),
                                 decoration: BoxDecoration(
                                   color: Colors.white,
                                   borderRadius: .circular(15),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.08),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.08,
+                                      ),
                                       blurRadius: 8,
                                     ),
                                   ],
@@ -257,72 +142,81 @@ class _HomePageState extends State<HomePage> {
                                   size: 20,
                                   color: Colors.red,
                                 ),
-                              )
-                          )
+                              ),
+                            ),
+                          ),
                         ],
-                      )
+                      ),
                     ),
                   ],
                 ),
               ),
-              Expanded(
-            child: products.isEmpty 
-            ? Center(child: Text("Belum ada produk"))  
-            : ListView.builder(
-              itemCount: products.length,
-              itemBuilder: (context, index){
-                final product = products[index];
+              Row(
+                mainAxisAlignment: .spaceBetween,
+                children: [
+                  Text(
+                    "Total semua produk ${totalProduct.toString()}",
+                    style: TextStyle(fontWeight: .bold),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ProductPage(),
+                        ),
+                      );
+                    },
+                    child: Text("Lihat selengkapnya"),
+                  ),
+                ],
+              ),
 
-                return Card(
-                  margin: EdgeInsets.only(bottom: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: .circular(15),
-                  ),
-                  child: ListTile(
-                    contentPadding: EdgeInsets.all(15),
-                    title: Text(
-                      product.name,
-                      style: TextStyle(
-                        fontWeight: .bold
+              Expanded(
+                child: products.isEmpty
+                    ? Center(child: Text("Belum ada produk"))
+                    : ListView.builder(
+                        itemCount: products.length,
+                        itemBuilder: (context, index) {
+                          final product = products[index];
+
+                          return Card(
+                            margin: EdgeInsets.only(bottom: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: .circular(15),
+                            ),
+                            child: ListTile(
+                              contentPadding: EdgeInsets.all(15),
+                              title: Text(
+                                product.name,
+                                style: TextStyle(fontWeight: .bold),
+                              ),
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      ProductDetailPage(product: product),
+                                ),
+                              ),
+                              subtitle: Column(
+                                crossAxisAlignment: .start,
+                                children: [
+                                  SizedBox(height: 5),
+                                  Text("Rp ${product.price}"),
+                                  SizedBox(height: 5),
+                                  Text(product.description),
+                                ],
+                              ),
+                            ),
+                          );
+                        
+                        },
                       ),
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: .start,
-                      children: [
-                        SizedBox(height: 5),
-                        Text("Rp ${product.price}"),
-                        SizedBox(height: 5),
-                        Text(product.description),
-                      ],
-                    ),
-                    leading: IconButton(
-                    icon: Icon(
-                      Icons.edit,
-                      color: Colors.orange,
-                    ),
-                    onPressed: () => showform(product: products[index], index: index),
-                    ),
-                    trailing: IconButton(
-                      icon: Icon(
-                        Icons.delete,
-                        color: Colors.red,
-                      ),
-                      onPressed: () => deleteProduct(index),
-                      ),
-                  ),
-                  
-                );
-              },
-            ),
+              ),
+            ],
           ),
-         ],
-        ), 
-        )
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: showform,
-        child: Icon(Icons.add),
         ),
+      ),
     );
   }
 }
